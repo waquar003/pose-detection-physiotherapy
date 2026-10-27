@@ -7,13 +7,17 @@ from src import config
 from src.video_processor import PoseProcessor
 
 st.set_page_config(page_title="Rehab Pose Correction", layout="centered")
-st.title("Pose mapper check")
+st.title("Physiotherapy coach")
 
 available = [n for n, p in config.MLP_WEIGHTS.items() if os.path.exists(p)]
 if not available:
-    st.error(f"No weights found in {config.MODELS_DIR}. Expected: {[p.name for p in config.MLP_WEIGHTS.values()]}")
+    st.error(f"No mapper weights found in {config.MODELS_DIR}. Expected: {[p.name for p in config.MLP_WEIGHTS.values()]}")
     st.stop()
-model_name = st.radio("Mapper model:", available, horizontal=True)
+
+selected_ex = st.selectbox("Exercise:", list(config.EXERCISES), format_func=lambda k: config.EXERCISES[k])
+
+error_placeholder = st.empty()
+info_placeholder = st.empty()
 
 ctx = webrtc_streamer(
     key="pose",
@@ -25,6 +29,18 @@ ctx = webrtc_streamer(
 )
 
 if ctx.video_processor:
-    ctx.video_processor.model_name = model_name
-    if ctx.video_processor.error:
-        st.error(ctx.video_processor.error)
+    proc = ctx.video_processor
+    proc.model_name = config.DEFAULT_MODEL
+    proc.exercise = selected_ex
+
+    if proc.error:
+        error_placeholder.error(proc.error)
+    else:
+        error_placeholder.empty()
+
+    if proc.coach_info:
+        (info_placeholder.info if proc.coach else info_placeholder.error)(proc.coach_info)
+
+    st.caption("Stand in the starting pose and begin. Press Restart to start tracking from the beginning again.")
+    if st.button("Restart exercise"):
+        proc.request_restart()
