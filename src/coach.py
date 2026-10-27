@@ -39,6 +39,20 @@ class FixedRate:
         self.t0, self.p0 = t, pts
         return out
 
+class GhostSmoother:
+    def __init__(self, alpha=0.35, blend=0.0):
+        self.alpha, self.blend, self.g = alpha, blend, None
+
+    def reset(self):
+        self.g = None
+
+    def __call__(self, ghost_norm, user_norm):
+        if self.g is None or self.alpha >= 1.0:
+            self.g = ghost_norm.copy()
+        else:
+            self.g += self.alpha * (ghost_norm - self.g)   # temporal low-pass in normalized space
+        # blend=0 shows the pure correct pose; 0.3 shows a pose partway between you and the target
+        return self.g + self.blend * (user_norm - self.g)
 
 class ExerciseCoach:
     """One exercise = one ghost pipeline (tracker -> enforcer -> ghost). Tracking starts at the first frame."""
@@ -54,11 +68,13 @@ class ExerciseCoach:
         self.draw_joints = self.required
         self.feeder = FixedRate(config.COACH_FPS)
         self.missed, self.last = 0, None
+        self.ghost_smoother = GhostSmoother(0.25, 0.3)
 
     def reset(self):
         self.live.reset()
         self.feeder.reset()
         self.missed, self.last = 0, None
+        self.ghost_smoother.reset()
 
     def skip(self):
         self._miss()
@@ -80,11 +96,30 @@ class ExerciseCoach:
         pts = np.asarray(joints, dtype=np.float32)
         for p in self.feeder.feed(t, pts):
             self.last = self.live.push_frame(p, k=1)
+
+        if self.last is None:
+            return CoachOutput(status="no_pose")
         
         o = self.last
         nb = o["neighbours"][0]
-        return CoachOutput(status="ok", phase=o["phase"], conf=o["phase_conf"], dist=nb["z_dist"],
-                           ghost_norm=nb["pose"], ghost_px=self._to_pixels(nb["pose"], pts))
+
+        if "user_pose" in o:
+            user_norm = o["user_pose"]
+        else:
+            hips = pts[config.JN["Hips"]]
+            tl = max(float(np.linalg.norm(pts[config.JN["Spine"]] - hips)), 1e-6)
+            user_norm = (pts - hips) / tl
+
+        ghost_smoothed = self.ghost_smoother(nb["pose"], user_norm)
+
+        return CoachOutput(
+            status="ok", 
+            phase=o["phase"], 
+            conf=o["phase_conf"], 
+            dist=nb["z_dist"],
+            ghost_norm=ghost_smoothed, 
+            ghost_px=self._to_pixels(ghost_smoothed, pts)
+        )
 
     @staticmethod
     def _to_pixels(ghost_norm, pts):

@@ -88,3 +88,9 @@ _ANGLE_JOINTS = [set(t) for t in ANGLE_DEFS] + [{"LeftShoulder", "RightShoulder"
 EMA_ALPHA, VEL_LAG = 0.5, 5
 WIN_BACK, WIN_FWD = 0.08, 0.12
 K0, KV, PCONF_MIN, GATE_NU, COAST_RELOCK = 0.35, 0.05, 0.35, 0.30, 15
+
+# Joint smoothing (One Euro filter, speed measured in torso lengths per second)
+SMOOTH_JOINTS = True
+ONE_EURO_MIN_CUTOFF = 1.5     # Hz. Lower = steadier when still, more lag. Raise it if the ghost feels late.
+ONE_EURO_BETA = 4.0           # Raise it if fast movements lag, lower it if fast movements are still jittery.
+ONE_EURO_D_CUTOFF = 1.0       # Hz. Smoothing of the speed estimate. Usually leave as is.

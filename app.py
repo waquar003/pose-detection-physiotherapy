@@ -23,7 +23,7 @@ ctx = webrtc_streamer(
     key="pose",
     mode=WebRtcMode.SENDRECV,
     rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
-    media_stream_constraints={"video": True, "audio": False},
+    media_stream_constraints={"video": {"width": 640, "height": 480}, "audio": False},
     video_processor_factory=PoseProcessor,
     async_processing=True,
 )

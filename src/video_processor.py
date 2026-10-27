@@ -68,10 +68,11 @@ class PoseProcessor(VideoProcessorBase):
         try:
             if self._restart:
                 self._restart = False
+                self.pipeline.reset()
                 if coach is not None:
                     coach.reset()
 
-            result = self.pipeline.process(img)
+            result = self.pipeline.process(img, t)
             self.drawer.draw_pose(img, result)
             lines += self.drawer.status_lines(result)
 
