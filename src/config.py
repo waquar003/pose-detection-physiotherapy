@@ -90,7 +90,16 @@ WIN_BACK, WIN_FWD = 0.08, 0.12
 K0, KV, PCONF_MIN, GATE_NU, COAST_RELOCK = 0.35, 0.05, 0.35, 0.30, 15
 
 # Joint smoothing (One Euro filter, speed measured in torso lengths per second)
-SMOOTH_JOINTS = True
+SMOOTH_JOINTS = False   # the landmarks are stabilised now; a second filter after the mapper only adds lag
 ONE_EURO_MIN_CUTOFF = 1.5     # Hz. Lower = steadier when still, more lag. Raise it if the ghost feels late.
 ONE_EURO_BETA = 4.0           # Raise it if fast movements lag, lower it if fast movements are still jittery.
 ONE_EURO_D_CUTOFF = 1.0       # Hz. Smoothing of the speed estimate. Usually leave as is.
+
+STABILIZE_LANDMARKS = True
+LM_ON_FRAMES = 3        # frames a group must be visible before it is trusted
+LM_OFF_FRAMES = 4       # frames a group must be missing before it is dropped (momentum hold in between)
+LM_DECAY = 0.7          # momentum decay per frame during a dropout
+LM_MAX_JUMP = 0.6       # shoulder-widths per frame; larger one-frame jumps are rejected (max 2 frames in a row)
+LM_MIN_CUTOFF = 2.0
+LM_BETA = 3.0
+
